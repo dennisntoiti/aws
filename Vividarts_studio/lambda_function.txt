@@ -1,0 +1,43 @@
+import boto3
+import os
+import random
+import string
+
+s3 = boto3.client('s3')
+
+def generate_random_id(length=6):
+    """Generate a random alphanumeric ID."""
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+
+def lambda_handler(event, context):
+    source_bucket = event['Records'][0]['s3']['bucket']['name']
+    key = event['Records'][0]['s3']['object']['key']
+
+    try:
+        # Generate a random ID
+        random_id = generate_random_id()
+
+        # Extract the file extension from the original key
+        _, extension = os.path.splitext(key)
+
+        # Construct the new key with 'vivid' and the random ID
+        new_key = f'vivid_{random_id}{extension}'
+
+        # Copy the object to the destination bucket with the new key
+        destination_bucket = 'dennisvividstudiofinal'
+        response = s3.copy_object(
+            Bucket=destination_bucket,
+            CopySource={'Bucket': source_bucket, 'Key': key},
+            Key=new_key
+        )
+
+        return {
+            'statusCode': 200,
+            'body': f'Image copied to {destination_bucket}/{new_key}.'
+        }
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'body': f'Error copying image: {str(e)}'
+        }
+
